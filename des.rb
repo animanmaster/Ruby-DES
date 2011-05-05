@@ -1,3 +1,19 @@
+class DES_Key
+    
+end
+
+class CBC
+    attr_accessor :des, :iv, :data
+
+    def initialize(des, iv, data)
+        @des = des;
+        @iv = iv;
+        @data = data;
+    end
+
+
+end
+
 class DES
     #Create an accessor for the key, but not a mutator.
     attr_accessor :key
@@ -28,7 +44,9 @@ class DES
     #The following are public methods
     
     def initialize(key)
-        @key = to_bit_array(key);
+        raise "IllegalArgumentException: expecting an instance of the DES_Key class." unless key.instance_of? DES_Key
+        @key = key
+        #@key = to_bit_array(key);
     end
 
     def encrypt(plaintext)
@@ -48,10 +66,11 @@ class DES
         size += 1 unless padding == 0
 
         blocks = Array.new(size)
-        str.each_byte { |byte|
+#        str.each_byte { |byte|
             
-        }
+#        }
 
+    end
 
     private
     #The following are private methods
@@ -59,10 +78,11 @@ class DES
     def to_bit_array(num)
         if input.is_a?(String)
             raise "Key must contain bytes." unless input.bytesize.eql?(8)
-        else if input.is_a?(Array)
+        elsif input.is_a?(Array)
             raise "Key must be exactly 64 bits." unless input.size.eql?(64)
 
         Array.new(num.size * 8) { |i| num[i] }.reverse
+        end
     end
 
     def to_byte_array(num) 
@@ -103,4 +123,5 @@ puts 7[0]
 puts 7[-1]
 
 puts 0xFF.size
+puts "a".force_encoding("us-ascii").bytes.to_a
 
