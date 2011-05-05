@@ -1,5 +1,109 @@
+class Array
+
+    def rotate_left(amount)
+        self[amount, self.length] + self[0, amount]
+    end
+
+    def pretty(n=8)
+        (0...self.length/n).each { |i|
+            print self[(n*i)...(n*i)+n].to_s,  " "
+        }
+        puts
+    end
+
+end
+
 class DES_Key
+    #Create an accessor for the key, but not a mutator.
+    attr_accessor :key, :kplus, :kn
+
+    @@PC1 = [
+        57, 49, 41, 33, 25, 17, 9,
+        1, 58, 50, 42, 34, 26, 18,
+        10, 2, 59, 51, 43, 35, 27,
+        19, 11, 3, 60, 52, 44, 36,
+        63, 55, 47, 39, 31, 23, 15,
+        7, 62, 54, 46, 38, 30, 22,
+        14, 6, 61, 53, 45, 37, 29,
+        21, 13, 5, 28, 20, 12, 4
+    ]
+
+    @@PC2 = [
+        14, 17, 11, 24, 1, 5,
+        3, 28, 15, 6, 21, 10,
+        23, 19, 12, 4, 26, 8,
+        16, 7, 27, 20, 13, 2,
+        41, 52, 31, 37, 47, 55,
+        30, 40, 51, 45, 33, 48,
+        44, 49, 39, 56, 34, 53,
+        46, 42, 50, 36, 29, 32
+    ]
+
+    def initialize(key)
+        @key = to_bit_array(key)
+        expandKey
+    end
+
+    def inspect
+        to_s
+    end
+
+    def to_s
+        s = ""
+        (0...8).each { |i|
+            s << @key[(8*i)...(8*i)+8].to_s << " "
+        }
+        return s
+    end
+
+    private
+
+    def expandKey
+        #K+ is the permuted key using only 56 bits of the original.
+        @kplus = []
+        @@PC1.map { |bit| 
+            @kplus << @key[bit - 1]
+        }
+        
+        #C_n and D_n form the 16 subkeys to use. 
+        c0, d0 = @kplus[0...28], @kplus[28..56]
+        cn, dn = [c0], [d0]
+        puts "c0 = #{c0}, d0 = #{d0}"
+        shifts = [1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1]
+        i = 1
+        shifts.each { |shift|
+            cn << cn.last.rotate_left(shift)
+            dn << dn.last.rotate_left(shift)
+            puts "c#{i} = #{cn.last}, d#{i} = #{dn.last}"
+            i+=1
+        }
+
+        #generate and store all the subkeys
+        @kn = []
+
+        (1..16).each { |n|
+            cndn = cn[n] + dn[n]
+            kn = [] 
+            @@PC2.map { |bit|
+                kn << cndn[bit - 1]
+            }
+            @kn << kn
+            print "k#{n} = "
+            kn.pretty(6)
+        }
+    end
     
+    def to_bit_array(input)
+        bitarr = []
+        if input.is_a? String
+            raise "Key must be a hex string of 8 bytes (16 characters)." unless input.length.eql?(16)
+            bitarr = to_bit_array(input.to_i(16))
+        elsif input.is_a? Integer
+            bitarr = Array.new(input.size * 8) { |i| input[i] }.reverse
+        end
+        return bitarr
+    end
+
 end
 
 class CBC
@@ -10,7 +114,10 @@ class CBC
         @iv = iv;
         @data = data;
     end
+end
 
+class Block
+    attr_accessor :bits
 
 end
 
@@ -46,14 +153,19 @@ class DES
     def initialize(key)
         raise "IllegalArgumentException: expecting an instance of the DES_Key class." unless key.instance_of? DES_Key
         @key = key
-        #@key = to_bit_array(key);
     end
 
-    def encrypt(plaintext)
-        blocks = get_blocks(plaintext);
+    def encrypt(plaintext_block)
+        if plaintext_block.is_a? String
+            plaintext_block = plaintext_block.hex
+        end
+
+        plaintext_block.is_a? Integer
+            
+
     end
 
-    def decrypt(ciphertext)
+    def decrypt(ciphertext_block)
 
     end
 
@@ -75,15 +187,6 @@ class DES
     private
     #The following are private methods
     
-    def to_bit_array(num)
-        if input.is_a?(String)
-            raise "Key must contain bytes." unless input.bytesize.eql?(8)
-        elsif input.is_a?(Array)
-            raise "Key must be exactly 64 bits." unless input.size.eql?(64)
-
-        Array.new(num.size * 8) { |i| num[i] }.reverse
-        end
-    end
 
     def to_byte_array(num) 
         result = [] 
@@ -107,21 +210,6 @@ class Integer
     end
 end
 
-#Experimenting with Ruby:
-#GOOD STUFF!
+puts DES_Key.new(0x133457799BBCDFF1)
 
-puts 1[0];
-puts 1[-1];
-
-1.print_bits
-65532.print_bits
-7.print_bits
-
-num = 10000000000000
-num.print_bits
-puts 7[0]
-puts 7[-1]
-
-puts 0xFF.size
-puts "a".force_encoding("us-ascii").bytes.to_a
-
+#puts String.instance_methods(false)
