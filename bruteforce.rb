@@ -9,7 +9,7 @@ class Message
     def self.checkValidity(message)
         message = to_ascii(message.format(1))
         counter = 0;
-        file = File.new("/home/remococco/code/java/HillCipher/src/hillcipher/bruteforce/dictionaries/english-words.all", "r")
+        file = File.new("english-words.all", "r")
         while (line = file.gets)
             if(message.include? line)
                 counter += 1
