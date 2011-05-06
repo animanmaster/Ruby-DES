@@ -1,7 +1,7 @@
 require 'des.rb'
 
 class CBC
-    attr_accessor :des, :iv, :data
+    attr_writer :des, :iv, :data
 
     def initialize(des, iv, data)
         @des = des
@@ -10,9 +10,13 @@ class CBC
         else
             @iv = iv.to_bits
         end
-        @data = data.to_bin
+        if data.instance_of? String
+            @data = data.to_bin
+            self.add_pad(64)
+        else
+            @data = data
+        end
         raise "IV must be 8 bytes." unless @iv.size == 64
-        self.add_pad(64)
     end
 
     def add_pad(multiple = 64)

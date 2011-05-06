@@ -9,7 +9,8 @@ ebc = EBC.new(des, "gZig^ZkZ")
 
 #puts Message.to_ascii(cbc.encipher())
 cipherText = ebc.encipher
-puts cipherText.format(1)
+#puts cipherText.pack('B*')
+puts ['0','1','1'].pack('B*')
 
 #ebc = EBC.new(des, cipherText)
 ebc.data = cipherText

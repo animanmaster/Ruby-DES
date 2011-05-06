@@ -16,9 +16,27 @@ class Message
             end
         end
         file.close
-        if(counter >= 10)
+        if(counter >= 3)
             puts message
         end
+    end
+end
+
+class DESEBCAttack
+    attr_accessor :key, :cipherText
+
+    def initialize(cipherText)
+        @key = '00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000'.to_bits
+        @cipherText = cipherText
+    end
+
+    def attack()
+        des = DES.new(@key)
+        begin
+            ebc = EBC.new(des, @cipherText).decipher
+            Message.checkValidity(ebc)
+            @key.increment
+        end until @key.exhaustedIncrease()
     end
 end
 
