@@ -83,99 +83,6 @@ class DES_Key
 
 end
 
-class CBC
-    attr_accessor :des, :iv, :data
-
-    def initialize(des, iv, data)
-        @des = des
-        if(iv.instance_of? Array)
-            @iv = iv
-        else
-            @iv = iv.to_bits
-        end
-        @data = data
-        raise "IV must be 8 bytes." unless @iv.size == 64
-        self.add_pad(64)
-    
-        puts @des.key.format(8)
-        puts @iv.format(8)
-        puts @data.format(8)
-    end
-
-    def add_pad(multiple = 64)
-        @data = @data.to_bits unless @data.instance_of? Array
-        while(@data.size % multiple != 0)
-            @data << '0'
-        end
-    end
-
-    def encipher()
-        blocks = @data.splitBlocks(64)
-        cipherText = []
-        l = @iv
-        blocks.size.do { |block|
-            bce = l.xor(block)
-            cipherText << (l = @des.encrypt(bce))
-        }
-        cipherText.pretty(8)
-    end
-
-    def decipher()
-        blocks = @data.splitBlocks(64)
-        plainText = []
-        l = @iv
-        blocks.size.do { |block|
-            bcd = @des.decrypt(block)
-            plainText << (l.xor(bcd))
-            l = block
-        }
-        plainText.pretty(8)
-    end
-end
-
-class Message
-    def self.to_ascii(binary_str)
-        binary_str.gsub(/\s/,'').gsub(/([01]{8})/) { |b| b.to_i(2).chr }
-    end
-
-    def self.checkValidity(message)
-        message = to_ascii(message)
-        counter = 0;
-        file = File.new("/home/remococco/code/java/HillCipher/src/hillcipher/bruteforce/dictionaries/english-words.all", "r")
-        while (line = file.gets)
-            if(message.include? line)
-                counter += 1
-            end
-        end
-        file.close
-        if(counter >= 10)
-            puts message
-        end
-    end
-end
-
-class DESCBCAttack
-    attr_accessor :key, :iv, :cipherText
-    
-    def initialize(cipherText)
-        @key = '00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000'.to_bits
-        @iv = '00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000'.to_bits
-        @cipherText = cipherText
-    end
-
-    def attack()
-        begin
-            des = DES.new(@key)
-            begin
-                cbc = CBC.new(des, @iv, @cipherText).decipher
-                Message.checkValidity(cbc)
-                @iv.increment
-            end until @iv.exhaustedIncreases()
-            @key.increment
-        end until @key.exhaustedIncreases()
-    end
-end
-
 class DES
     #Create an accessor for the key, but not a mutator.
     attr_accessor :key
@@ -288,8 +195,6 @@ class DES
         2, 1, 14, 7, 4, 10, 8, 13, 15, 12, 9, 0, 3, 5, 6, 11
     ]
 
-    @@S_BOXES = [@@S1, @@S2, @@S3, @@S4, @@S5, @@S6, @@S7, @@S8]
-
     @@P = [
         16, 7, 20, 21,
         29, 12, 28, 17,
@@ -300,29 +205,33 @@ class DES
         19, 13, 30, 6,
         22, 11, 4, 25
     ]
+    
+    @@S_BOXES = [@@S1, @@S2, @@S3, @@S4, @@S5, @@S6, @@S7, @@S8]
 
+    
     def perform_des(key_order, input_block)
         data = if input_block.is_a? Array then input_block else [] end
-        if input_block.is_a? String
-            input_block.each_byte { |byte| data += byte.to_bits }
-        end
+        
+        if input_block.is_a? String then input_block.each_byte { |byte| data += byte.to_bits } end
 
         raise "Expected data length of 64 bits, received #{data.length} bits of data: #{data}" unless data.length == 64
         
-
         #permute the text using IP
         permuted = data.permute(@@IP)
 
+        #split the permutation in half
         l0, r0 = permuted[0...32], permuted[32...64]
 
         last_l, last_r = l0, r0
 
+        # Apply the keys to the data in the order dictated by key_order (increasing for encryption, decreasing for decryption.
         key_order.each { |n|
             ln = last_r
             rn = last_l.xor(f(last_r, @key.kn[n]))
             last_l, last_r  = ln, rn
         }
 
+        # Return the result by juxtaposing the two blocks and performing the final permutation.
         (last_r + last_l).permute(@@IP_INVERSE)
     end
 
@@ -351,10 +260,10 @@ class DES
 
 end
 
-key = DES_Key.new(0x133457799BBCDFF1)
-des = DES.new(key)
-puts des.encrypt(0x0123456789ABCDEF.to_bits).to_s.to_i(2).to_s(16)
-puts des.decrypt(0x85e813540f0ab405.to_bits).to_s.to_i(2).to_s(16)
+#key = DES_Key.new(0x133457799BBCDFF1)
+#des = DES.new(key)
+#puts des.encrypt(0x0123456789ABCDEF.to_bits).to_s.to_i(2).to_s(16)
+#puts des.decrypt(0x85e813540f0ab405.to_bits).to_s.to_i(2).to_s(16)
 #puts DES_Key.new(0x133457799BBCDFF1)
 #test = "00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000".to_bits
 
