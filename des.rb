@@ -1,8 +1,28 @@
 class String
     def to_bits
-        bitarr=[]
+        bitarr = []
         self.each_char { |c| bitarr << c.to_i if c=='0' || c=='1' }
         bitarr
+    end
+
+    def to_bin
+        bitarr = []
+        self.each_byte { |byte| 
+            if(byte != 0.to_ba)
+                bitarr << byte.to_ba
+            end
+        }
+        helper(bitarr.flatten!.format(8))
+    end
+
+    def helper(str) 
+        bitarray = []
+        str.split(' ').each { |block|
+            if(block != '00000000')
+                bitarray << block
+            end
+        }
+        bitarray.format(8)
     end
 end
 
@@ -11,12 +31,20 @@ class Array
         self[amount, self.length] + self[0, amount]
     end
 
-    def pretty(n=8)
-        (0...self.length/n).each { |i|
-            print self[(n*i)...(n*i)+n].to_s,  " "
+    def pretty(n = 8)
+        (0...self.length / n).each { |i| 
+            print self[(n * i) ... (n * i) + n].to_s,  
+            " " 
+            puts 
         }
-        puts
     end
+
+    def format(n = 8)
+        s=""
+        self.each_with_index { |bit, i| s += bit.to_s; s += ' ' if (i + 1) % n == 0 }
+        s
+    end
+
 
     def splitBlocks(size)
         arr = []
@@ -87,7 +115,11 @@ class DES_Key
     ]
 
     def initialize(key)
-        @key = to_bit_array(key)
+        if(key.is_a? Array)
+            @key = key
+        else
+            @key = to_bit_array(key)
+        end
         expandKey
     end
 
@@ -166,6 +198,10 @@ class CBC
         @data = data
         raise "IV must be 8 bytes." unless @iv.size == 64
         self.add_pad(64)
+    
+        puts @des.key.format(8)
+        puts @iv.format(8)
+        puts @data.format(8)
     end
 
     def add_pad(multiple = 64)
@@ -200,7 +236,7 @@ class CBC
 end
 
 class Message
-    def to_ascii(binary_str)
+    def self.to_ascii(binary_str)
         binary_str.gsub(/\s/,'').gsub(/([01]{8})/) { |b| b.to_i(2).chr }
     end
 
@@ -235,7 +271,9 @@ class DESCBCAttack
             begin
                 cbc = CBC.new(des, @iv, @cipherText).decipher
                 Message.checkValidity(cbc)
+                @iv.increment
             end until @iv.exhaustedIncreases()
+            @key.increment
         end until @key.exhaustedIncreases()
     end
 end
@@ -334,6 +372,14 @@ class Integer
     end
 end
 
-puts DES_Key.new(0x133457799BBCDFF1)
+#puts DES_Key.new(0x133457799BBCDFF1)
+test = "00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000".to_bits
 
+message = "0100100001100101011011000110110001101111"
+
+str = "This is a sentence."
+
+puts str.to_bin
+
+puts Message.to_ascii(str.to_bin)
 #puts String.instance_methods(false)
