@@ -18,7 +18,6 @@ class Array
         s
     end
 
-
     def splitBlocks(size)
         arr = []
         subarr = []
@@ -36,7 +35,7 @@ class Array
         i = 0
         self.map { |a|
             i += 1
-            a ^ b[i - 1]
+            a ^ b[i - 1].to_i
         }
     end
                   
@@ -78,7 +77,10 @@ class Integer
         print to_ba
         puts
     end
-
+    
+    def to_ba
+        Array.new(self.size * 8) { |i| self[i] }.reverse
+    end
 end
 
 class String
@@ -91,9 +93,7 @@ class String
     def to_bin
         bitarr = []
         self.each_byte { |byte| 
-            if(byte != 0.to_ba)
-                bitarr << byte.to_ba
-            end
+            bitarr << byte.to_ba
         }
         helper(bitarr.flatten!.format(8))
     end

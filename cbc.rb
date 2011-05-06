@@ -10,13 +10,9 @@ class CBC
         else
             @iv = iv.to_bits
         end
-        @data = data
+        @data = data.to_bin
         raise "IV must be 8 bytes." unless @iv.size == 64
         self.add_pad(64)
-    
-        puts @des.key.format(8)
-        puts @iv.format(8)
-        puts @data.format(8)
     end
 
     def add_pad(multiple = 64)
@@ -30,22 +26,22 @@ class CBC
         blocks = @data.splitBlocks(64)
         cipherText = []
         l = @iv
-        blocks.size.do { |block|
+        blocks.each do |block|
             bce = l.xor(block)
             cipherText << (l = @des.encrypt(bce))
-        }
-        cipherText.pretty(8)
+        end
+        cipherText.format(1)
     end
 
     def decipher()
         blocks = @data.splitBlocks(64)
         plainText = []
         l = @iv
-        blocks.size.do { |block|
+        blocks.each do |block|
             bcd = @des.decrypt(block)
             plainText << (l.xor(bcd))
             l = block
-        }
+        end
         plainText.pretty(8)
     end
 end
