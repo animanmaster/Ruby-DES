@@ -54,14 +54,10 @@ class DES_Key
         #C_n and D_n form the 16 subkeys to use. 
         c0, d0 = @kplus[0...28], @kplus[28...56]
         cn, dn = [c0], [d0]
-        puts "c0 = #{c0}, d0 = #{d0}"
         shifts = [1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1]
-        i = 1
         shifts.each { |shift|
             cn << cn.last.rotate_left(shift)
             dn << dn.last.rotate_left(shift)
-            puts "c#{i} = #{cn.last}, d#{i} = #{dn.last}"
-            i+=1
         }
 
         #generate and store all the subkeys
@@ -71,8 +67,6 @@ class DES_Key
             cndn = cn[n] + dn[n]
             kn =  cndn.permute(@@PC2)
             @kn << kn
-            print "k#{n} = "
-            kn.pretty(6)
         }
     end
     
@@ -329,41 +323,29 @@ class DES
             last_l, last_r  = ln, rn
         }
 
-        print "l16 = "; last_l.pretty(4); print "r16 = "; last_r.pretty(4);
-
         (last_r + last_l).permute(@@IP_INVERSE)
     end
+
     def e(r_block)
-        print "r = "
-        r_block.pretty(4)
-        result = r_block.permute(@@E)
-        print "e(r) = "
-        result.pretty(6)
-        return result
+        r_block.permute(@@E)
     end
 
     def f(r_block, key)
         r = e(r_block)
         xored = key.xor(r)
-        print "key = "; key.pretty(6);
-        print "r = "; r.pretty(6);
-        print "key xor r = "; xored.pretty(6);
-        
-        result = []
 
+        result = []
         (0...8).each do |i|
             b = xored[i*6...i*6+6]
             result << s(i, b)
         end
-        print "Result after S-boxes: "; result.pretty(4)
+
         result.flatten!.permute(@@P)
     end
 
     def s(i, b)
-        puts "b#{i} = #{b}"
         row = [b.first, b.last].to_s.to_i(2)
         col = b[1...b.length-1].to_s.to_i(2)
-        puts "s#{i}[#{row}][#{col}] = #{@@S_BOXES[i][row * 16 + col]}"
         @@S_BOXES[i][row * 16 + col].to_bits.last(4)
     end
 
