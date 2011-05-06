@@ -1,3 +1,11 @@
+class String
+    def to_bits
+        bitarr=[]
+        self.each_char { |c| bitarr << c.to_i if c=='0' || c=='1' }
+        bitarr
+    end
+end
+
 class Array
     def rotate_left(amount)
         self[amount, self.length] + self[0, amount]
@@ -10,6 +18,46 @@ class Array
         puts
     end
 
+    def splitBlocks(size)
+        arr = []
+        subarr = []
+        self.each { |a|
+            subarr << a
+            if subarr.length == size
+                arr << subarr
+                subarr = []
+            end
+        }
+        arr
+    end 
+    
+    def xor(b)
+        i = 0
+        self.map { |a|
+            i += 1
+            a ^ b[i - 1]
+        }
+    end
+                  
+    def increment()
+        (0 .. self.size - 1).each do |i|
+            if(self[i] == 0)
+                self[i] = 1
+                break
+            else
+                self[i] = 0
+            end
+        end
+    end
+
+    def exhaustedIncreases()
+        (0 ... self.size).each do |i|
+            if(self[i] == 0)
+                False
+            end
+        end
+        True
+    end
 end
 
 class DES_Key
@@ -109,9 +157,64 @@ class CBC
     attr_accessor :des, :iv, :data
 
     def initialize(des, iv, data)
-        @des = des;
-        @iv = iv;
-        @data = data;
+        @des = des
+        if(iv.instance_of? Array)
+            @iv = iv
+        else
+            @iv = iv.to_bits
+        end
+        @data = data
+        raise "IV must be 8 bytes." unless @iv.size == 64
+        self.add_pad(64)
+    end
+
+    def add_pad(multiple = 64)
+        @data = @data.to_bits unless @data.instance_of? Array
+        while(@data.size % multiple != 0)
+            @data << '0'
+        end
+    end
+
+    def encipher()
+        blocks = @data.splitBlocks(64)
+        cipherText = []
+        l = @iv
+        blocks.size.do { |block|
+            bce = l.xor(block)
+            cipherText << (l = @des.encrypt(bce))
+        }
+        cipherText.pretty(8)
+    end
+
+    def decipher()
+        blocks = @data.splitBlocks(64)
+        plainText = []
+        l = @iv
+        blocks.size.do { |block|
+            bcd = @des.decrypt(block)
+            plainText << (l.xor(bcd))
+            l = block
+        }
+        plainText.pretty(8)
+    end
+end
+
+class DESCBCAttack
+    attr_accessor :key, :iv, :cipherText
+    
+    def initialize(cipherText)
+        @key = '00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000'.to_bits
+        @iv = '00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000'.to_bits
+        @cipherText = cipherText
+    end
+
+    def attack()
+        begin
+            des = DES.new(@key)
+            begin
+                cbc = CBC.new(des, @iv, @cipherText).decipher
+            end until @iv.exhaustedIncreases()
+        end until @key.exhaustedIncreases()
     end
 end
 
