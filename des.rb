@@ -1,70 +1,4 @@
-class String
-    def to_bits
-        bitarr=[]
-        self.each_char { |c| bitarr << c.to_i if c=='0' || c=='1'  }
-        bitarr
-    end
-end
-
-class Array
-    def rotate_left(amount)
-        self[amount, self.length] + self[0, amount]
-    end
-
-    def pretty(n=8)
-        (0...self.length/n).each { |i|
-            print self[(n*i)...(n*i)+n].to_s,  " "
-        }
-        puts
-    end
-
-    def splitBlocks(size)
-        arr = []
-        subarr = []
-        self.each { |a|
-            subarr << a
-            if subarr.length == size
-                arr << subarr
-                subarr = []
-            end
-        }
-        arr
-    end 
-    
-    def xor(b)
-        i = 0
-        self.map { |a|
-            i += 1
-            a ^ b[i - 1]
-        }
-    end
-                  
-    def increment()
-        (0 .. self.size - 1).each do |i|
-            if(self[i] == 0)
-                self[i] = 1
-                break
-            else
-                self[i] = 0
-            end
-        end
-    end
-
-    def exhaustedIncreases()
-        (0 ... self.size).each do |i|
-            if(self[i] == 0)
-                False
-            end
-        end
-        True
-    end
-
-    def permute(table)
-        permuted = []
-        table.map { |index| permuted << self[index-1] }
-        return permuted
-    end
-end
+require 'additions.rb'
 
 class DES_Key
     #Create an accessor for the key, but not a mutator.
@@ -93,7 +27,11 @@ class DES_Key
     ]
 
     def initialize(key)
-        @key = to_bit_array(key)
+        if(key.is_a? Array)
+            @key = key
+        else
+            @key = to_bit_array(key)
+        end
         expandKey
     end
 
@@ -103,9 +41,7 @@ class DES_Key
 
     def to_s
         s = ""
-        (0...8).each { |i|
-            s << @key[(8*i)...(8*i)+8].to_s << " "
-        }
+        (0...8).each { |i| s << @key[(8*i)...(8*i)+8].to_s << " " }
         return s
     end
 
@@ -113,10 +49,6 @@ class DES_Key
 
     def expandKey
         #K+ is the permuted key using only 56 bits of the original.
-        #@kplus = []
-        #@@PC1.map { |bit| 
-        #    @kplus << @key[bit - 1]
-        #}
         @kplus = @key.permute(@@PC1)
         
         #C_n and D_n form the 16 subkeys to use. 
@@ -137,10 +69,6 @@ class DES_Key
 
         (1..16).each { |n|
             cndn = cn[n] + dn[n]
-            #kn = [] 
-            #@@PC2.map { |bit|
-            #    kn << cndn[bit - 1]
-            #}
             kn =  cndn.permute(@@PC2)
             @kn << kn
             print "k#{n} = "
@@ -174,6 +102,10 @@ class CBC
         @data = data
         raise "IV must be 8 bytes." unless @iv.size == 64
         self.add_pad(64)
+    
+        puts @des.key.format(8)
+        puts @iv.format(8)
+        puts @data.format(8)
     end
 
     def add_pad(multiple = 64)
@@ -207,6 +139,27 @@ class CBC
     end
 end
 
+class Message
+    def self.to_ascii(binary_str)
+        binary_str.gsub(/\s/,'').gsub(/([01]{8})/) { |b| b.to_i(2).chr }
+    end
+
+    def self.checkValidity(message)
+        message = to_ascii(message)
+        counter = 0;
+        file = File.new("/home/remococco/code/java/HillCipher/src/hillcipher/bruteforce/dictionaries/english-words.all", "r")
+        while (line = file.gets)
+            if(message.include? line)
+                counter += 1
+            end
+        end
+        file.close
+        if(counter >= 10)
+            puts message
+        end
+    end
+end
+
 class DESCBCAttack
     attr_accessor :key, :iv, :cipherText
     
@@ -221,7 +174,10 @@ class DESCBCAttack
             des = DES.new(@key)
             begin
                 cbc = CBC.new(des, @iv, @cipherText).decipher
+                Message.checkValidity(cbc)
+                @iv.increment
             end until @iv.exhaustedIncreases()
+            @key.increment
         end until @key.exhaustedIncreases()
     end
 end
@@ -261,35 +217,11 @@ class DES
     end
 
     def encrypt(plaintext_block)
-        text = if plaintext_block.is_a? Array then plaintext_block else [] end
-        if plaintext_block.is_a? String
-            plaintext_block.each_byte { |byte| text += byte.to_bits }
-        end
-
-        raise "Expected data length of 64 bits, received #{text.length} bits of data: #{text}" unless text.length == 64
-        
-
-        #@@IP.map { |bit| permuted << text[bit - 1] }    #permute the text using IP
-        permuted = text.permute(@@IP)
-
-        l0, r0 = permuted[0...32], permuted[32...64]
-
-        last_l, last_r = l0, r0
-
-        1.upto(16) { |n|
-            ln = last_r
-            rn = last_l.xor(f(last_r, @key.kn[n]))
-            last_l, last_r  = ln, rn
-        }
-
-        print "l16 = "; last_l.pretty(4); print "r16 = "; last_r.pretty(4);
-
-        (last_r + last_l).permute(@@IP_INVERSE)
-
+        perform_des(1.upto(16), plaintext_block)
     end
 
     def decrypt(ciphertext_block)
-
+        perform_des(16.downto(1), ciphertext_block)
     end
 
 
@@ -375,6 +307,32 @@ class DES
         22, 11, 4, 25
     ]
 
+    def perform_des(key_order, input_block)
+        data = if input_block.is_a? Array then input_block else [] end
+        if input_block.is_a? String
+            input_block.each_byte { |byte| data += byte.to_bits }
+        end
+
+        raise "Expected data length of 64 bits, received #{data.length} bits of data: #{data}" unless data.length == 64
+        
+
+        #permute the text using IP
+        permuted = data.permute(@@IP)
+
+        l0, r0 = permuted[0...32], permuted[32...64]
+
+        last_l, last_r = l0, r0
+
+        key_order.each { |n|
+            ln = last_r
+            rn = last_l.xor(f(last_r, @key.kn[n]))
+            last_l, last_r  = ln, rn
+        }
+
+        print "l16 = "; last_l.pretty(4); print "r16 = "; last_r.pretty(4);
+
+        (last_r + last_l).permute(@@IP_INVERSE)
+    end
     def e(r_block)
         print "r = "
         r_block.pretty(4)
@@ -411,20 +369,22 @@ class DES
 
 end
 
-class Integer
-    def to_bits
-        Array.new(self.size * 8) { |i| self[i] }.reverse
-    end
-
-    def print_bits
-        print to_ba
-        puts
-    end
-end
-
-puts "0101".to_i(2)
 key = DES_Key.new(0x133457799BBCDFF1)
 des = DES.new(key)
 puts des.encrypt(0x0123456789ABCDEF.to_bits).to_s.to_i(2).to_s(16)
+puts des.decrypt(0x85e813540f0ab405.to_bits).to_s.to_i(2).to_s(16)
+#puts DES_Key.new(0x133457799BBCDFF1)
+#test = "00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000".to_bits
 
+#key = DES_Key.new(0x5B5A57676A56676E)
+#plainText = 0x675A69675E5A6B5A
+
+#des = DES.new(key)
+#puts des.encrypt(plainText)
+
+#message = "0100100001100101011011000110110001101111"
+
+#str = "This is a sentence."
+#puts str.to_bin
+#puts Message.to_ascii(str.to_bin)
 #puts String.instance_methods(false)
