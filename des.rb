@@ -1,3 +1,4 @@
+class Array
     def rotate_left(amount)
         self[amount, self.length] + self[0, amount]
     end
