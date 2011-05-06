@@ -1,7 +1,7 @@
 class String
     def to_bits
         bitarr=[]
-        self.each_char { |c| bitarr << c.to_i if c=='0' || c=='1' }
+        self.each_char { |c| bitarr << c.to_i if c=='0' || c=='1'  }
         bitarr
     end
 end
@@ -58,6 +58,12 @@ class Array
         end
         True
     end
+
+    def permute(table)
+        permuted = []
+        table.map { |index| permuted << self[index-1] }
+        return permuted
+    end
 end
 
 class DES_Key
@@ -107,13 +113,14 @@ class DES_Key
 
     def expandKey
         #K+ is the permuted key using only 56 bits of the original.
-        @kplus = []
-        @@PC1.map { |bit| 
-            @kplus << @key[bit - 1]
-        }
+        #@kplus = []
+        #@@PC1.map { |bit| 
+        #    @kplus << @key[bit - 1]
+        #}
+        @kplus = @key.permute(@@PC1)
         
         #C_n and D_n form the 16 subkeys to use. 
-        c0, d0 = @kplus[0...28], @kplus[28..56]
+        c0, d0 = @kplus[0...28], @kplus[28...56]
         cn, dn = [c0], [d0]
         puts "c0 = #{c0}, d0 = #{d0}"
         shifts = [1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1]
@@ -126,14 +133,15 @@ class DES_Key
         }
 
         #generate and store all the subkeys
-        @kn = []
+        @kn = [c0 + d0]
 
         (1..16).each { |n|
             cndn = cn[n] + dn[n]
-            kn = [] 
-            @@PC2.map { |bit|
-                kn << cndn[bit - 1]
-            }
+            #kn = [] 
+            #@@PC2.map { |bit|
+            #    kn << cndn[bit - 1]
+            #}
+            kn =  cndn.permute(@@PC2)
             @kn << kn
             print "k#{n} = "
             kn.pretty(6)
@@ -141,7 +149,7 @@ class DES_Key
     end
     
     def to_bit_array(input)
-        bitarr = []
+        bitarr = if input.is_a? Array then input else [] end
         if input.is_a? String
             raise "Key must be a hex string of 8 bytes (16 characters)." unless input.length.eql?(16)
             bitarr = to_bit_array(input.to_i(16))
@@ -218,11 +226,6 @@ class DESCBCAttack
     end
 end
 
-class Block
-    attr_accessor :bits
-
-end
-
 class DES
     #Create an accessor for the key, but not a mutator.
     attr_accessor :key
@@ -258,12 +261,30 @@ class DES
     end
 
     def encrypt(plaintext_block)
+        text = if plaintext_block.is_a? Array then plaintext_block else [] end
         if plaintext_block.is_a? String
-            plaintext_block = plaintext_block.hex
+            plaintext_block.each_byte { |byte| text += byte.to_bits }
         end
 
-        plaintext_block.is_a? Integer
-            
+        raise "Expected data length of 64 bits, received #{text.length} bits of data: #{text}" unless text.length == 64
+        
+
+        #@@IP.map { |bit| permuted << text[bit - 1] }    #permute the text using IP
+        permuted = text.permute(@@IP)
+
+        l0, r0 = permuted[0...32], permuted[32...64]
+
+        last_l, last_r = l0, r0
+
+        1.upto(16) { |n|
+            ln = last_r
+            rn = last_l.xor(f(last_r, @key.kn[n]))
+            last_l, last_r  = ln, rn
+        }
+
+        print "l16 = "; last_l.pretty(4); print "r16 = "; last_r.pretty(4);
+
+        (last_r + last_l).permute(@@IP_INVERSE)
 
     end
 
@@ -271,38 +292,127 @@ class DES
 
     end
 
-    protected
-
-    def get_blocks(str)
-        raise "Cannot break up anything but a String." unless str.is_a?(String)
-        size = str.bytesize / 8
-        padding = str.bytesize % 8
-        size += 1 unless padding == 0
-
-        blocks = Array.new(size)
-#        str.each_byte { |byte|
-            
-#        }
-
-    end
 
     private
-    #The following are private methods
-    
 
-    def to_byte_array(num) 
-        result = [] 
-        begin 
-            result << (num & 0xff) 
-            num >>= 8 
-        end until (num == 0 || num == -1) && (result.last[7] == num[7]) 
-        result.reverse 
-    end
+    @@E = [
+        32, 1, 2, 3, 4, 5,
+        4, 5, 6, 7, 8, 9,
+        8, 9, 10, 11, 12, 13,
+        12, 13, 14, 15, 16, 17,
+        16, 17, 18, 19, 20, 21,
+        20, 21, 22, 23, 24, 25,
+        24, 25, 26, 27, 28, 29,
+        28, 29, 30, 31, 32, 1
+    ]
+
+    @@S1 = [
+        14, 4, 13, 1, 2, 15, 11, 8, 3, 10, 6, 12, 5, 9, 0, 7,
+        0, 15, 7, 4, 14, 2, 13, 1, 10, 6, 12, 11, 9, 5, 3, 8,
+        4, 1, 14, 8, 13, 6, 2, 11, 15, 12, 9, 7, 3, 10, 5, 0,
+        15, 12, 8, 2, 4, 9, 1, 7, 5, 11, 3, 14, 10, 0, 6, 13
+    ]
+
+    @@S2 = [
+        15, 1, 8, 14, 6, 11, 3, 4, 9, 7, 2, 13, 12, 0, 5, 10,
+        3, 13, 4, 7, 15, 2, 8, 14, 12, 0, 1, 10, 6, 9, 11, 5,
+        0, 14, 7, 11, 10, 4, 13, 1, 5, 8, 12, 6, 9, 3, 2, 15,
+        13, 8, 10, 1, 3, 15, 4, 2, 11, 6, 7, 12, 0, 5, 14, 9
+    ]
+
+    @@S3 = [
+        10, 0, 9, 14, 6, 3, 15, 5, 1, 13, 12, 7, 11, 4, 2, 8,
+        13, 7, 0, 9, 3, 4, 6, 10, 2, 8, 5, 14, 12, 11, 15, 1,
+        13, 6, 4, 9, 8, 15, 3, 0, 11, 1, 2, 12, 5, 10, 14, 7,
+        1, 10, 13, 0, 6, 9, 8, 7, 4, 15, 14, 3, 11, 5, 2, 12
+    ]
+
+    @@S4 = [
+        7, 13, 14, 3, 0, 6, 9, 10, 1, 2, 8, 5, 11, 12, 4, 15,
+        13, 8, 11, 5, 6, 15, 0, 3, 4, 7, 2, 12, 1, 10, 14, 9,
+        10, 6, 9, 0, 12, 11, 7, 13, 15, 1, 3, 14, 5, 2, 8, 4,
+        3, 15, 0, 6, 10, 1, 13, 8, 9, 4, 5, 11, 12, 7, 2, 14
+    ]
+
+    @@S5 = [
+        2, 12, 4, 1, 7, 10, 11, 6, 8, 5, 3, 15, 13, 0, 14, 9,
+        14, 11, 2, 12, 4, 7, 13, 1, 5, 0, 15, 10, 3, 9, 8, 6,
+        4, 2, 1, 11, 10, 13, 7, 8, 15, 9, 12, 5, 6, 3, 0, 14,
+        11, 8, 12, 7, 1, 14, 2, 13, 6, 15, 0, 9, 10, 4, 5, 3
+    ]
+
+    @@S6 = [
+       12, 1, 10, 15, 9, 2, 6, 8, 0, 13, 3, 4, 14, 7, 5, 11,
+       10, 15, 4, 2, 7, 12, 9, 5, 6, 1, 13, 14, 0, 11, 3, 8,
+       9, 14, 15, 5, 2, 8, 12, 3, 7, 0, 4, 10, 1, 13, 11, 6,
+       4, 3, 2, 12, 9, 5, 15, 10, 11, 14, 1, 7, 6, 0, 8, 13
+    ]
     
+    @@S7 = [
+        4, 11, 2, 14, 15, 0, 8, 13, 3, 12, 9, 7, 5, 10, 6, 1,
+        13, 0, 11, 7, 4, 9, 1, 10, 14, 3, 5, 12, 2, 15, 8, 6,
+        1, 4, 11, 13, 12, 3, 7, 14, 10, 15, 6, 8, 0, 5, 9, 2,
+        6, 11, 13, 8, 1, 4, 10, 7, 9, 5, 0, 15, 14, 2, 3, 12
+    ]
+
+    @@S8 = [
+        13, 2, 8, 4, 6, 15, 11, 1, 10, 9, 3, 14, 5, 0, 12, 7,
+        1, 15, 13, 8, 10, 3, 7, 4, 12, 5, 6, 11, 0, 14, 9, 2,
+        7, 11, 4, 1, 9, 12, 14, 2, 0, 6, 10, 13, 15, 3, 5, 8,
+        2, 1, 14, 7, 4, 10, 8, 13, 15, 12, 9, 0, 3, 5, 6, 11
+    ]
+
+    @@S_BOXES = [@@S1, @@S2, @@S3, @@S4, @@S5, @@S6, @@S7, @@S8]
+
+    @@P = [
+        16, 7, 20, 21,
+        29, 12, 28, 17,
+        1, 15, 23, 26,
+        5, 18, 31, 10,
+        2, 8, 24, 14,
+        32, 27, 3, 9,
+        19, 13, 30, 6,
+        22, 11, 4, 25
+    ]
+
+    def e(r_block)
+        print "r = "
+        r_block.pretty(4)
+        result = r_block.permute(@@E)
+        print "e(r) = "
+        result.pretty(6)
+        return result
+    end
+
+    def f(r_block, key)
+        r = e(r_block)
+        xored = key.xor(r)
+        print "key = "; key.pretty(6);
+        print "r = "; r.pretty(6);
+        print "key xor r = "; xored.pretty(6);
+        
+        result = []
+
+        (0...8).each do |i|
+            b = xored[i*6...i*6+6]
+            result << s(i, b)
+        end
+        print "Result after S-boxes: "; result.pretty(4)
+        result.flatten!.permute(@@P)
+    end
+
+    def s(i, b)
+        puts "b#{i} = #{b}"
+        row = [b.first, b.last].to_s.to_i(2)
+        col = b[1...b.length-1].to_s.to_i(2)
+        puts "s#{i}[#{row}][#{col}] = #{@@S_BOXES[i][row * 16 + col]}"
+        @@S_BOXES[i][row * 16 + col].to_bits.last(4)
+    end
+
 end
 
 class Integer
-    def to_ba
+    def to_bits
         Array.new(self.size * 8) { |i| self[i] }.reverse
     end
 
@@ -312,6 +422,9 @@ class Integer
     end
 end
 
-puts DES_Key.new(0x133457799BBCDFF1)
+puts "0101".to_i(2)
+key = DES_Key.new(0x133457799BBCDFF1)
+des = DES.new(key)
+puts des.encrypt(0x0123456789ABCDEF.to_bits).to_s.to_i(2).to_s(16)
 
 #puts String.instance_methods(false)
