@@ -35,7 +35,7 @@ class Array
         i = 0
         self.map { |a|
             i += 1
-            a ^ b[i - 1].to_i
+            a.to_i ^ b[i - 1].to_i
         }
     end
                   

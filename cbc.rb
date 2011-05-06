@@ -42,6 +42,6 @@ class CBC
             plainText << (l.xor(bcd))
             l = block
         end
-        plainText.pretty(8)
+        plainText.format(8)
     end
 end
