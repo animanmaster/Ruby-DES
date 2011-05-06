@@ -61,10 +61,10 @@ class Array
     def exhaustedIncreases()
         (0 ... self.size).each do |i|
             if(self[i] == 0)
-                False
+                true
             end
         end
-        True
+        return false
     end
 
     def permute(table)

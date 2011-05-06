@@ -20,3 +20,6 @@ cipherText = cbc.encipher
 cbc.data = cipherText
 puts Message.to_ascii(cipherText.format(1))
 puts Message.to_ascii(cbc.decipher.format(1))
+
+desebc = DESEBCAttack.new(cipherText)
+desebc.attack

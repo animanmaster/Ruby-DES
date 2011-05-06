@@ -7,7 +7,7 @@ class Message
     end
 
     def self.checkValidity(message)
-        message = to_ascii(message)
+        message = to_ascii(message.format(1))
         counter = 0;
         file = File.new("/home/remococco/code/java/HillCipher/src/hillcipher/bruteforce/dictionaries/english-words.all", "r")
         while (line = file.gets)
@@ -28,6 +28,7 @@ class DESEBCAttack
     def initialize(cipherText)
         @key = '00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000'.to_bits
         @cipherText = cipherText
+        @key = DES_Key.new(@key)
     end
 
     def attack()
@@ -35,8 +36,8 @@ class DESEBCAttack
         begin
             ebc = EBC.new(des, @cipherText).decipher
             Message.checkValidity(ebc)
-            @key.increment
-        end until @key.exhaustedIncrease()
+            @key.key.increment
+        end until @key.key.exhaustedIncreases()
     end
 end
 
