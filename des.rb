@@ -370,16 +370,26 @@ class Integer
         print to_ba
         puts
     end
+
+    def to_bits
+        bitarr = []
+        bitarr = Array.new(input.size * 8) { |i| input[i] }.reverse
+        bitarr
+    end
 end
 
 #puts DES_Key.new(0x133457799BBCDFF1)
-test = "00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000".to_bits
+#test = "00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000".to_bits
 
-message = "0100100001100101011011000110110001101111"
+key = DES_Key.new(0x5B5A57676A56676E)
+plainText = 0x675A69675E5A6B5A
 
-str = "This is a sentence."
+des = DES.new(key)
+puts des.encrypt(plainText)
 
-puts str.to_bin
+#message = "0100100001100101011011000110110001101111"
 
-puts Message.to_ascii(str.to_bin)
+#str = "This is a sentence."
+#puts str.to_bin
+#puts Message.to_ascii(str.to_bin)
 #puts String.instance_methods(false)
