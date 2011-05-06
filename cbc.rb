@@ -31,21 +31,22 @@ class CBC
         cipherText = []
         l = @iv
         blocks.each do |block|
-            bce = l.xor(block)
+            bce = l.xor_i(block)
             cipherText << (l = @des.encrypt(bce))
         end
-        cipherText.format(1)
+        cipherText
     end
 
     def decipher()
+        @data.flatten!
         blocks = @data.splitBlocks(64)
         plainText = []
         l = @iv
         blocks.each do |block|
             bcd = @des.decrypt(block)
-            plainText << (l.xor(bcd))
+            plainText << (l.xor_i(bcd))
             l = block
         end
-        plainText.format(8)
+        plainText
     end
 end

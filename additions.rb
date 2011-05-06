@@ -31,6 +31,14 @@ class Array
         arr
     end 
     
+    def xor_i(b)
+        i = 0
+        self.map { |a|
+            i += 1
+            a.to_i ^ b[i - 1].to_i
+        }
+    end
+
     def xor(b)
         i = 0
         self.map { |a|

@@ -30,7 +30,7 @@ class EBC
     end
 
     def decipher()
-        @data = @data[0]
+        @data.flatten!
         blocks = @data.splitBlocks(64)
         plainText = []
         blocks.each do |block|
