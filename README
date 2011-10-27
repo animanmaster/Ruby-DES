@@ -1,0 +1,25 @@
+This is a Ruby implementation of DES (with ECB and CBC block chaining) by me and Steve Cirner (scirner22) for our Network Security class.
+
+Here's a little breakdown of each file:
+
+* additions.rb 
+   This file adds methods to Ruby.s builtin Array, Integer, and String classes that we use in our other classes.
+
+* bruteforce.rb  
+   This file contains classes that perform brute force attacks against ciphertext that was encrypted using DES-CBC or DES-ECB.
+
+* cbc.rb  
+   This file contains the CBC class that implements DES-CBC.
+
+* des.rb  
+   This file contains the class that performs DES encryption/decryption on a single 64-bit block of data.
+
+* ebc.rb  
+   This file contains the ECB class that implements DES-ECB.
+
+* english-words.all  
+   This is the word list file used for brute force. 
+
+* test.rb
+   This is the test harness class. Run this file to try to attempt a brute force. 
+
